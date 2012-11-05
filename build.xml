@@ -1,0 +1,159 @@
+<?xml version="1.0"?>
+
+
+<project name="contest" basedir="." default="help">
+
+    <loadproperties srcfile="problem.properties"/>
+    <property name="javac.deprecation" value="true"/>
+    <property name="javac.debug" value="on"/>
+    <property name="javac.debuglevel" value="lines,vars,source"/>
+
+    <property name="project.root.dir" value="."/>
+    <property name="build.dir" value="${project.root.dir}/build"/>
+    <property name="config.dir" value="${project.root.dir}/config"/>
+    <property name="src.dir" value="${project.root.dir}/src"/>
+    <property name="test.dir" value="${project.root.dir}/test"/>
+    <property name="classes.dir" value="${build.dir}/classes"/>
+    <property name="lib.dir" value="${build.dir}/lib"/>
+    <property name="filename" value=""/>
+
+    <path id="compile.classpath">
+        <fileset dir="${lib.dir}">
+            <include name="*.jar"/>
+        </fileset>
+    </path>
+
+    <path id="test.compile.classpath">
+        <path refid="compile.classpath"/>
+        <pathelement location="${classes.dir}"/>
+    </path>
+
+    <path id="run.classpath">
+        <path refid="test.compile.classpath"/>
+        <pathelement location="${classes.dir}/test"/>
+    </path>
+
+    <taskdef resource="net/sf/antcontrib/antcontrib.properties">
+        <classpath refid="run.classpath"/>
+    </taskdef>
+
+
+    <target name="init" description=" --> Prints Java Version and Registration #">
+
+
+        <echo message=""/>
+        <tstamp>
+            <format property="this.moment" pattern="yyyy.MMM.dd.hhmmss" locale="en"/>
+        </tstamp>
+        <echo message="Started on ${TODAY} at ${TSTAMP}"/>
+        <echo message=""/>        
+        <echo message="JVM version Ant is running on:  ${ant.java.version}"/>
+
+        <echo message=""/>
+        <mkdir dir="${build.dir}"/>
+        <mkdir dir="${classes.dir}"/>
+        <mkdir dir="${classes.dir}/test"/>
+
+		<property environment="env"/>
+		<condition property="hostname" value="${env.HOSTNAME}">
+		<os family="unix"/>
+		</condition>
+		<condition property="hostname" value="${env.COMPUTERNAME}">
+		<os family="windows"/>
+		</condition>
+		<!-- perhaps i stricter test is necessary, not sure it works on older windows systems.-->
+		<!-- what to do on Mac or other operation systems??? -->
+		<echo message="host = ${hostname}"/>
+    </target>
+
+    <target name="compile" depends="init" description=" --> Compile Source Tree">
+
+
+        <javac destdir="${classes.dir}"
+               deprecation="${javac.deprecation}"
+               debug="${javac.debug}"
+               debuglevel="${javac.debuglevel}"
+               source="1.5">
+            <src path="${src.dir}"/>
+            <classpath refid="compile.classpath"/>
+        </javac>
+    </target>
+
+
+    <target name="zip" depends="compile" description=" --> Zip Source Tree">
+        <zip destfile="${classes.dir}/${hostname}.zip">
+            <fileset dir="${src.dir}"/>
+            <fileset file="problem.properties"/>
+        </zip>
+		<echo message="UPLOAD THE ZIP FILE AT : ${classes.dir}/${hostname}.zip"/>
+	</target>
+
+    <target name="clean.compile" depends="clean, compile" description=" --> Clean and Compile">
+    </target>
+
+	<target name="clean.compile.test" depends="clean, compile.test" description=" --> Clean and Compile Test Tree">
+    </target>
+
+
+    <target name="clean" description=" --> Clean Build space">
+        <delete dir="${classes.dir}"/>
+    </target>
+
+
+    <target name="compile.test" depends="compile" description=" --> Compile Test Tree">
+        <javac destdir="${classes.dir}/test"
+               deprecation="${javac.deprecation}"
+               debug="${javac.debug}"
+               debuglevel="${javac.debuglevel}"
+               source="1.5">
+            <src path="${test.dir}"/>
+            <classpath refid="test.compile.classpath"/>
+        </javac>
+
+    </target>
+
+
+    <target name="help">
+        <java fork="no" classname="org.apache.tools.ant.Main">
+            <arg line="-projecthelp"/>
+        </java>
+    </target>
+
+
+    <target name="runtests" depends="compile.test" description=" --> Runs all the unit tests">
+
+        <mkdir dir="testoutput"/>
+
+        <junit printsummary="yes" haltonfailure="no" >
+          <classpath refid="run.classpath"/>
+
+          <formatter type="xml"/>
+
+          <batchtest fork="yes" todir="testoutput">
+            <fileset dir="${project.root.dir}/test">
+              <include name="**/*Test*.java"/>
+            </fileset>
+          </batchtest>
+
+        </junit>
+
+    </target>
+
+    <target name="concat" depends="runtests">
+        <concat destfile="AllTests.xml">
+            <fileset dir="${project.root.dir}/testoutput">
+              <include name="**/*Test*.xml"/>
+            </fileset>
+        </concat>
+    </target>
+
+    <target name="test" depends="concat">
+        <loadfile property="test.results" srcfile="AllTests.xml" />
+        <post to="http://localhost:9000/TestPost/postTestResult" verbose="false">
+            <prop name="guid" value="${problemid}"/>
+            <prop name="cuid" value="${competitionid}"/>
+            <prop name="testResults" value="${test.results}"/>
+        </post>
+    </target>
+
+</project>
