@@ -51,6 +51,10 @@ public class Count implements ICount {
 	public static void main(String[] args) {
 		Count count = new Count();
 		int[] denoms = new int[] {1,2,3};
-		count.findAllPossibleCombinations(4,denoms );
+		CoinChangeAnswer coAnswer = count.findAllPossibleCombinations(4,denoms);
+		
+		for (String str : coAnswer.allPossibleChanges) {
+			System.out.println(str);
+		}
 	}
 }
